@@ -21,11 +21,21 @@
         .restaurant-item p { margin: 0 0 8px 0; font-size: 14px; color: #666; }
         .detail-btn { background: #17a2b8; color: white; border: none; padding: 8px 12px; border-radius: 4px; font-size: 13px; cursor: pointer; }
         #directions-panel { font-size: 14px; line-height: 1.5; color: #444; }
+        .map-selector { background: #e9ecef; padding: 10px; margin-bottom: 15px; border-radius: 6px; }
+        .map-selector label { font-size: 14px; font-weight: bold; display: block; margin-bottom: 5px; color: #333; }
     </style>
 </head>
 <body>
     <div id="map"></div>
     <div id="panel">
+        <!-- マップ切り替えメニュー -->
+        <div class="map-selector">
+            <label>表示するエリア（マイマップ）</label>
+            <select id="kml-select" onchange="loadKML()">
+                  <option value="bangkok.kml">🇯🇵 宮本君専用バンコクガイド</option>
+            </select>
+        </div>
+
         <div class="tab-buttons">
             <button id="tab-nav" class="active" onclick="switchTab('nav')">ルート案内</button>
             <button id="tab-food" onclick="switchTab('food')">近くの飲食店</button>
@@ -50,11 +60,11 @@
         </div>
     </div>
 
-    <!-- APIキー組み込み済み -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCzrQQ6y01Usax8pyxuqxl0HPT9Ilrve2Q&libraries=places&callback=initMap" async defer></script>
+    <!-- API_KEY_HERE を書き換えてください -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCzrQQ6y01Usax8pyxuqxl0HPT9Ilrve2Q&libraries=geometry,places&callback=initMap" async defer></script>
     
     <script>
-        let map, infoWindow, directionsService, directionsRenderer, placesService;
+        let map, directionsService, directionsRenderer, placesService, currentPolyline;
         let currentLocation = null;
         let destinations = [];
 
@@ -87,12 +97,28 @@
                             icon: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
                         });
                     },
-                    (error) => { alert("現在地の取得に失敗しました。スマホの位置情報設定を確認してください。"); },
+                    (error) => { console.log("位置情報が取得できませんでした"); },
                     { enableHighAccuracy: true }
                 );
             }
 
-            fetch('data.kml')
+            // 初期表示のKMLを読み込む
+            loadKML();
+        }
+
+        // 選択されたKMLファイルを読み込む関数
+        function loadKML() {
+            const filename = document.getElementById("kml-select").value;
+            const select = document.getElementById("destination-select");
+            
+            select.innerHTML = '<option value="">読み込み中...</option>';
+            destinations = []; // 以前の目的地リストをリセット
+            
+            // ルート案内の表示もリセット
+            directionsRenderer.setDirections({routes: []});
+            document.getElementById("directions-panel").innerHTML = "";
+
+            fetch(filename)
                 .then(response => {
                     if (!response.ok) throw new Error("KMLなし");
                     return response.text();
@@ -101,8 +127,7 @@
                     const parser = new DOMParser();
                     const xmlDoc = parser.parseFromString(text, "text/xml");
                     const placemarks = xmlDoc.getElementsByTagName("Placemark");
-                    const select = document.getElementById("destination-select");
-                    select.innerHTML = '<option value="">マイマップの目的地を選択</option>';
+                    select.innerHTML = '<option value="">目的地を選択してください</option>';
 
                     for (let i = 0; i < placemarks.length; i++) {
                         const name = placemarks[i].getElementsByTagName("name")[0]?.textContent;
@@ -122,7 +147,7 @@
                 })
                 .catch(e => {
                     console.log(e);
-                    document.getElementById("destination-select").innerHTML = '<option value="">(data.kmlが見つかりません)</option>';
+                    select.innerHTML = `<option value="">(${filename} が見つかりません)</option>`;
                 });
         }
 
@@ -132,80 +157,177 @@
             document.getElementById(tab + '-content').classList.add('active');
             document.getElementById('tab-' + tab).classList.add('active');
         }
+function calculateRoute() {
+        if (!currentLocation) return alert("現在地を取得中です。");
+        
+        const select = document.getElementById("destination-select");
+        const selectedIndex = select.value;
+        const mode = document.getElementById("travel-mode").value;
 
-        function calculateRoute() {
-            if (!currentLocation) return alert("現在地を取得中です。");
-            
-            const select = document.getElementById("destination-select");
-            const selectedIndex = select.value;
-            const mode = document.getElementById("travel-mode").value;
+        if (selectedIndex === "") return alert("目的地を選択してください。");
 
-            if (selectedIndex === "") return alert("目的地を選択してください。");
+        const dest = destinations[selectedIndex];
+        
+        // ▼▼▼ ここから書き換え ▼▼▼
 
-            const dest = destinations[selectedIndex];
-            const request = {
-                origin: currentLocation,
-                destination: { lat: dest.lat, lng: dest.lng },
-                travelMode: google.maps.TravelMode[mode],
-                transitOptions: { routingPreference: 'FEWER_TRANSFERS' }
-            };
-
-            directionsService.route(request, (result, status) => {
-                if (status === 'OK') {
-                    directionsRenderer.setDirections(result);
-                } else {
-                    alert("ルートを検索できませんでした。(" + status + ")");
+        // 旧APIのモード名を、新API(Routes API)用に変換する
+        let routeMode = "DRIVE";
+        if (mode === "WALKING") routeMode = "WALK";
+        if (mode === "TRANSIT") routeMode = "TRANSIT";
+        if (mode === "DRIVING") routeMode = "DRIVE";
+        
+        // Routes API 用のリクエストデータ
+        const requestBody = {
+            origin: {
+                location: {
+                    latLng: {
+                        latitude: currentLocation.lat,
+                        longitude: currentLocation.lng
+                    }
                 }
-            });
+            },
+            destination: {
+                location: {
+                    latLng: {
+                        latitude: dest.lat,
+                        longitude: dest.lng
+                    }
+                }
+            },
+            travelMode: routeMode
+        };
+
+        // routingPreference は「車(DRIVE)」のときのみ設定可能
+        if (routeMode === 'DRIVE') {
+            requestBody.routingPreference = 'TRAFFIC_UNAWARE';
         }
 
-        function findNearbyRestaurants() {
+        // Routes API への直接通信 (fetch)
+        // ※ YOUR_API_KEY_HERE を実際のAPIキーに書き換えてください
+        fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Goog-Api-Key': 'AIzaSyCzrQQ6y01Usax8pyxuqxl0HPT9Ilrve2Q', // ←ここにAPIキーを入れる
+                'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline'
+            },
+            body: JSON.stringify(requestBody)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.routes && data.routes.length > 0) {
+                // 取得したルートデータ（エンコードされたポリライン）を地図に描画
+                const route = data.routes[0];
+                const decodedPath = google.maps.geometry.encoding.decodePath(route.polyline.encodedPolyline);
+
+                // 既存のルートをクリアして新しく描画
+                directionsRenderer.setDirections({routes: []});
+                if (currentPolyline) currentPolyline.setMap(null); // ★前の線を地図から消す
+                
+                currentPolyline = new google.maps.Polyline({ // ★const を currentPolyline に変更
+                    path: decodedPath,
+                    strokeColor: '#0000FF',
+                    strokeOpacity: 0.8,
+                    strokeWeight: 6
+                });
+                currentPolyline.setMap(map); // ★polyline を currentPolyline に変更
+
+
+                // パネルに距離と時間を表示
+                const distanceKm = (route.distanceMeters / 1000).toFixed(1);
+                const durationMin = Math.round(parseInt(route.duration) / 60);
+                document.getElementById("directions-panel").innerHTML = 
+                    `<p><b>距離:</b> ${distanceKm} km <br><b>予想時間:</b> 約 ${durationMin} 分</p>`;
+                    
+                // ルート全体が見えるように地図のズームを調整
+                const bounds = new google.maps.LatLngBounds();
+                decodedPath.forEach(point => bounds.extend(point));
+                map.fitBounds(bounds);
+
+            } else {
+                alert("ルートが見つかりませんでした。");
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching route:', error);
+            alert("ルート検索でエラーが発生しました: " + error.message);
+        });
+    }
+        
+function findNearbyRestaurants() {
             if (!currentLocation) return alert("現在地を取得中です。");
 
             const listEl = document.getElementById("restaurant-list");
             listEl.innerHTML = "検索中...";
 
-            const request = {
-                location: currentLocation,
-                radius: '800',
-                type: ['restaurant']
+            const requestBody = {
+                includedTypes: ["restaurant"],
+                maxResultCount: 10,
+                locationRestriction: {
+                    circle: {
+                        center: {
+                            latitude: currentLocation.lat,
+                            longitude: currentLocation.lng
+                        },
+                        radius: 800.0
+                    }
+                }
             };
 
-            placesService.nearbySearch(request, (results, status) => {
-                if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+            fetch('https://places.googleapis.com/v1/places:searchNearby', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    // ↓ルート検索と同じご自身のAPIキーです
+                    'X-Goog-Api-Key': 'AIzaSyCzrQQ6y01Usax8pyxuqxl0HPT9Ilrve2Q',
+                    'X-Goog-FieldMask': 'places.displayName,places.rating,places.priceLevel,places.googleMapsUri'
+                },
+                body: JSON.stringify(requestBody)
+            })
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                if (data.places && data.places.length > 0) {
                     listEl.innerHTML = "";
-                    results.sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 10).forEach(place => {
-                        const priceLevel = place.price_level !== undefined ? "¥".repeat(place.price_level + 1) : "価格帯データなし";
+                    // 評価（rating）が高い順に並び替え
+                    data.places.sort((a, b) => (b.rating || 0) - (a.rating || 0)).forEach(place => {
+                        const name = place.displayName ? place.displayName.text : "店名不明";
                         const rating = place.rating ? `⭐${place.rating}` : "評価なし";
                         
+                        let priceStr = "価格帯データなし";
+                        if (place.priceLevel === "PRICE_LEVEL_INEXPENSIVE") priceStr = "¥";
+                        if (place.priceLevel === "PRICE_LEVEL_MODERATE") priceStr = "¥¥";
+                        if (place.priceLevel === "PRICE_LEVEL_EXPENSIVE") priceStr = "¥¥¥";
+                        if (place.priceLevel === "PRICE_LEVEL_VERY_EXPENSIVE") priceStr = "¥¥¥¥";
+
+                        const uri = place.googleMapsUri || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}`;
+
                         const div = document.createElement("div");
                         div.className = "restaurant-item";
                         div.innerHTML = `
-                            <h4>${place.name}</h4>
-                            <p>${rating} / ${priceLevel}</p>
-                            <button class="detail-btn" onclick="openPlaceDetails('${place.place_id}')">メニュー・詳細を見る</button>
+                            <h4>${name}</h4>
+                            <p>${rating} / ${priceStr}</p>
+                            <button class="detail-btn" onclick="window.open('${uri}', '_blank')">Googleマップで見る</button>
                         `;
                         listEl.appendChild(div);
                     });
                 } else {
                     listEl.innerHTML = "近くに飲食店が見つかりませんでした。";
                 }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                listEl.innerHTML = "検索でエラーが発生しました。";
             });
         }
-
-        function openPlaceDetails(placeId) {
-            const request = {
-                placeId: placeId,
-                fields: ['url']
-            };
-            placesService.getDetails(request, (place, status) => {
-                if (status === google.maps.places.PlacesServiceStatus.OK && place.url) {
-                    window.open(place.url, '_blank');
-                } else {
-                    alert("詳細URLが取得できませんでした。");
-                }
-            });
-        }
+        // ※openPlaceDetails 関数は不要になったため削除してOKです
     </script>
 </body>
 </html>
