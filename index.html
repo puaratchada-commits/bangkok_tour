@@ -32,7 +32,7 @@
         <div class="map-selector">
             <label>表示するエリア（マイマップ）</label>
             <select id="kml-select" onchange="loadKML()">
-                  <option value="bangkok.kml">🇯🇵 宮本君専用バンコクガイド</option>
+                  <option value="bangkok.kml">🇹🇭 宮本君専用バンコクガイド</option>
             </select>
         </div>
 
@@ -68,13 +68,13 @@
         let currentLocation = null;
         let destinations = [];
 
-        function initMap() {
-            map = new google.maps.Map(document.getElementById("map"), {
-                center: { lat: 35.6812, lng: 139.7671 }, 
-                zoom: 15,
-                mapTypeControl: false,
-                streetViewControl: false
-            });
+    function initMap() {
+        map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: 13.7563, lng: 100.5018 }, // ←バンコクの座標に変更
+        zoom: 14, 
+        mapTypeControl: false,
+        streetViewControl: false
+    });
             
             directionsService = new google.maps.DirectionsService();
             directionsRenderer = new google.maps.DirectionsRenderer();
