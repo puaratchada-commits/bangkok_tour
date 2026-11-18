@@ -45,6 +45,42 @@
         <styleUrl>#icon-1899-0097A7-nodesc-highlight</styleUrl>
       </Pair>
     </StyleMap>
+    <Style id="icon-1899-0288D1-normal">
+      <IconStyle>
+        <color>ffd18802</color>
+        <scale>1</scale>
+        <Icon>
+          <href>https://www.gstatic.com/mapspro/images/stock/503-wht-blank_maps.png</href>
+        </Icon>
+        <hotSpot x="32" xunits="pixels" y="64" yunits="insetPixels"/>
+      </IconStyle>
+      <LabelStyle>
+        <scale>0</scale>
+      </LabelStyle>
+    </Style>
+    <Style id="icon-1899-0288D1-highlight">
+      <IconStyle>
+        <color>ffd18802</color>
+        <scale>1</scale>
+        <Icon>
+          <href>https://www.gstatic.com/mapspro/images/stock/503-wht-blank_maps.png</href>
+        </Icon>
+        <hotSpot x="32" xunits="pixels" y="64" yunits="insetPixels"/>
+      </IconStyle>
+      <LabelStyle>
+        <scale>1</scale>
+      </LabelStyle>
+    </Style>
+    <StyleMap id="icon-1899-0288D1">
+      <Pair>
+        <key>normal</key>
+        <styleUrl>#icon-1899-0288D1-normal</styleUrl>
+      </Pair>
+      <Pair>
+        <key>highlight</key>
+        <styleUrl>#icon-1899-0288D1-highlight</styleUrl>
+      </Pair>
+    </StyleMap>
     <Style id="icon-1899-0288D1-nodesc-normal">
       <IconStyle>
         <color>ffd18802</color>
@@ -527,6 +563,34 @@
         <Point>
           <coordinates>
             100.5351377,13.728223,0
+          </coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>Raja Wonton Noodle（旨いタイヌードル）</name>
+        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
+        <Point>
+          <coordinates>
+            100.5752241,13.789722,0
+          </coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>アスピラ ワン スティサーン</name>
+        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
+        <Point>
+          <coordinates>
+            100.5745805,13.7904607,0
+          </coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>タイ赤十字チュラロンコン病院</name>
+        <description>蛇のショーあり</description>
+        <styleUrl>#icon-1899-0288D1</styleUrl>
+        <Point>
+          <coordinates>
+            100.5344403,13.7330094,0
           </coordinates>
         </Point>
       </Placemark>
