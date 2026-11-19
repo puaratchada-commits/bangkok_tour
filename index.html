@@ -32,7 +32,7 @@
         <div class="map-selector">
             <label>表示するエリア（マイマップ）</label>
             <select id="kml-select" onchange="loadKML()">
-                  <option value="bangkok.kml">🇹🇭 宮本君専用バンコクガイド</option>
+                 <option value="bangkok.kml">🇹🇭 宮本君専用バンコクガイド</option>
             </select>
         </div>
 
@@ -68,13 +68,13 @@
         let currentLocation = null;
         let destinations = [];
 
-    function initMap() {
-        map = new google.maps.Map(document.getElementById("map"), {
-        center: { lat: 13.7563, lng: 100.5018 }, // ←バンコクの座標に変更
-        zoom: 14, 
-        mapTypeControl: false,
-        streetViewControl: false
-    });
+        function initMap() {
+            map = new google.maps.Map(document.getElementById("map"), {
+               center: { lat: 13.7563, lng: 100.5018 }, // バンコクの座標
+                zoom: 14,
+                mapTypeControl: false,
+                streetViewControl: false
+            });
             
             directionsService = new google.maps.DirectionsService();
             directionsRenderer = new google.maps.DirectionsRenderer();
@@ -238,12 +238,16 @@ function calculateRoute() {
                 currentPolyline.setMap(map); // ★polyline を currentPolyline に変更
 
 
-                // パネルに距離と時間を表示
+               // パネルに距離と時間、Googleマップ（店舗詳細）へのリンクボタンを表示
                 const distanceKm = (route.distanceMeters / 1000).toFixed(1);
                 const durationMin = Math.round(parseInt(route.duration) / 60);
+                const gmapPlaceUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(dest.name)}`;
+
                 document.getElementById("directions-panel").innerHTML = 
-                    `<p><b>距離:</b> ${distanceKm} km <br><b>予想時間:</b> 約 ${durationMin} 分</p>`;
-                    
+                    `<p><b>距離:</b> ${distanceKm} km <br><b>予想時間:</b> 約 ${durationMin} 分</p>
+                     <button class="detail-btn" style="width: 100%; padding: 10px; font-size: 14px;" onclick="window.open('${gmapPlaceUrl}', '_blank')">Googleマップで詳細・クチコミを見る</button>`;
+
+                
                 // ルート全体が見えるように地図のズームを調整
                 const bounds = new google.maps.LatLngBounds();
                 decodedPath.forEach(point => bounds.extend(point));
